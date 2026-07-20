@@ -97,13 +97,7 @@ export function PullRequests({ settings, onOpenSettings }: Props) {
     </div>
   ) : (
     prs.map((pr) => (
-      <a
-        key={pr.id}
-        className="list-row"
-        href={pr.htmlUrl}
-        target="_blank"
-        rel="noreferrer"
-      >
+      <a key={pr.id} className="list-row" href={pr.htmlUrl}>
         <span className={`list-row-icon${pr.draft ? ' draft' : ''}`}>
           <GitPRIcon />
         </span>

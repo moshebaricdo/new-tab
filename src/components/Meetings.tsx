@@ -149,12 +149,7 @@ export function Meetings({ settings, onOpenSettings }: Props) {
                 {formatRelative(primary.start).replace(/^./, (c) => c.toUpperCase())}
               </span>
               {primary.htmlLink ? (
-                <a
-                  className="meeting-next-title"
-                  href={primary.htmlLink}
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                <a className="meeting-next-title" href={primary.htmlLink}>
                   {primary.title}
                 </a>
               ) : (
@@ -167,12 +162,7 @@ export function Meetings({ settings, onOpenSettings }: Props) {
             </div>
             {primary.conferenceLink ? (
               <div className="meeting-next-actions">
-                <a
-                  className="btn-join"
-                  href={primary.conferenceLink}
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                <a className="btn-join" href={primary.conferenceLink}>
                   <VideoIcon size={JOIN_ICON_SIZE} />
                   Join
                 </a>
@@ -198,12 +188,7 @@ function MeetingRow({ event }: { event: CalendarEvent }) {
     <div className="list-row meeting-row">
       <div className="list-row-body">
         {event.htmlLink ? (
-          <a
-            className="list-row-title meeting-row-title"
-            href={event.htmlLink}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a className="list-row-title meeting-row-title" href={event.htmlLink}>
             {event.title}
           </a>
         ) : (

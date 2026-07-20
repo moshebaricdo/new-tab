@@ -270,13 +270,7 @@ function AppsRow({
     return (
       <div className="apps-row">
         {apps.map((app) => (
-          <a
-            key={app.id}
-            className="app-tile pressable"
-            href={app.url}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a key={app.id} className="app-tile pressable" href={app.url}>
             <AppIcon app={app} />
             <span className="app-tile-label">{app.name}</span>
           </a>
@@ -713,7 +707,7 @@ function SortableLink({
       >
         <GripIcon />
       </button>
-      <a className="folder-link-main" href={link.url} target="_blank" rel="noreferrer">
+      <a className="folder-link-main" href={link.url}>
         <span className="folder-content-start">
           {favicon ? (
             <img className="folder-favicon" src={favicon} alt="" width={16} height={16} />
