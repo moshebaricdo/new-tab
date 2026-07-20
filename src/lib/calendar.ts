@@ -3,6 +3,8 @@ import type { CalendarEvent } from '../types'
 
 const TOKEN_KEY = 'new-tab-screen:gcal-token'
 const TOKEN_EXP_KEY = 'new-tab-screen:gcal-token-exp'
+/** Remembers that the user linked Calendar so we can silently refresh after token expiry. */
+const LINKED_KEY = 'new-tab-screen:gcal-linked'
 
 type GcalEntryPoint = {
   entryPointType?: string
@@ -50,28 +52,57 @@ function waitForGoogle(timeoutMs = 8000): Promise<typeof window.google> {
   })
 }
 
+function readStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key) ?? sessionStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function writeStorage(key: string, value: string) {
+  localStorage.setItem(key, value)
+  // Clear any leftover sessionStorage copy from older builds.
+  sessionStorage.removeItem(key)
+}
+
+function removeStorage(key: string) {
+  localStorage.removeItem(key)
+  sessionStorage.removeItem(key)
+}
+
+export function isCalendarLinked(): boolean {
+  return readStorage(LINKED_KEY) === '1' || Boolean(readStorage(TOKEN_KEY))
+}
+
 export function getStoredAccessToken(): string | null {
-  const token = sessionStorage.getItem(TOKEN_KEY)
-  const exp = Number(sessionStorage.getItem(TOKEN_EXP_KEY) || 0)
-  if (!token || !exp || Date.now() > exp) {
-    sessionStorage.removeItem(TOKEN_KEY)
-    sessionStorage.removeItem(TOKEN_EXP_KEY)
+  const token = readStorage(TOKEN_KEY)
+  const exp = Number(readStorage(TOKEN_EXP_KEY) || 0)
+  // Refresh a minute early so background sync doesn't hit a 401.
+  if (!token || !exp || Date.now() > exp - 60_000) {
+    if (token) {
+      removeStorage(TOKEN_KEY)
+      removeStorage(TOKEN_EXP_KEY)
+    }
     return null
   }
   return token
 }
 
-function storeAccessToken(token: string, expiresInSeconds = 3500) {
-  sessionStorage.setItem(TOKEN_KEY, token)
-  sessionStorage.setItem(TOKEN_EXP_KEY, String(Date.now() + expiresInSeconds * 1000))
+function storeAccessToken(token: string, expiresInSeconds = 3599) {
+  const ttl = Math.max(60, expiresInSeconds - 30)
+  writeStorage(TOKEN_KEY, token)
+  writeStorage(TOKEN_EXP_KEY, String(Date.now() + ttl * 1000))
+  writeStorage(LINKED_KEY, '1')
 }
 
 export const GCAL_DISCONNECTED_EVENT = 'new-tab:gcal-disconnected'
 
 export function clearAccessToken() {
-  const token = sessionStorage.getItem(TOKEN_KEY)
-  sessionStorage.removeItem(TOKEN_KEY)
-  sessionStorage.removeItem(TOKEN_EXP_KEY)
+  const token = readStorage(TOKEN_KEY)
+  removeStorage(TOKEN_KEY)
+  removeStorage(TOKEN_EXP_KEY)
+  removeStorage(LINKED_KEY)
   if (token && window.google?.accounts?.oauth2) {
     window.google.accounts.oauth2.revoke(token)
   }
@@ -89,12 +120,14 @@ export async function connectGoogleCalendar(clientId: string): Promise<string> {
     const client = window.google!.accounts.oauth2.initTokenClient({
       client_id: clientId.trim(),
       scope: 'https://www.googleapis.com/auth/calendar.readonly',
+      // Empty prompt: consent only on first connect; later refreshes reuse the grant.
       callback: (response) => {
         if (response.error || !response.access_token) {
           reject(new Error(response.error || 'Google sign-in was cancelled.'))
           return
         }
-        storeAccessToken(response.access_token)
+        const expiresIn = Number(response.expires_in) || 3599
+        storeAccessToken(response.access_token, expiresIn)
         resolve(response.access_token)
       },
     })
@@ -161,7 +194,11 @@ export async function fetchUpcomingEvents(accessToken: string): Promise<Calendar
 
   const data = (await res.json()) as { items?: GcalEvent[]; error?: { message?: string } }
   if (!res.ok) {
-    if (res.status === 401) clearAccessToken()
+    if (res.status === 401) {
+      removeStorage(TOKEN_KEY)
+      removeStorage(TOKEN_EXP_KEY)
+      // Keep LINKED_KEY so the next load can silently re-auth.
+    }
     throw new Error(data.error?.message || `Calendar API error (${res.status})`)
   }
 

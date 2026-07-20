@@ -6,7 +6,7 @@ A minimal personal new-tab dashboard with:
 - **Upcoming Google Calendar** events
 - **Shortcuts**: a fixed app row (Gmail, Calendar, Figma, GitHub) plus folders of links you can add, edit, reorder, and delete
 
-Everything editable (settings, shortcuts, folders) lives in **localStorage**. Google Calendar access tokens live in **sessionStorage** for the tab session.
+Everything editable (settings, shortcuts, folders, and the Google Calendar token) lives in **localStorage**.
 
 ## Develop locally
 
@@ -65,6 +65,6 @@ Tokens are requested in the browser via Google Identity Services; nothing is sen
 | --- | --- |
 | Name, GitHub token/username, Google Client ID | `localStorage` |
 | App row + folders/links | `localStorage` |
-| Google OAuth access token | `sessionStorage` (re-connect after the tab/session ends if expired) |
+| Google OAuth access token | `localStorage` (auto-refreshes silently after Connect; Disconnect in Settings) |
 
 Clearing site data for your Pages origin will wipe the dashboard configuration.

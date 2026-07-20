@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { clearAccessToken, getStoredAccessToken } from '../lib/calendar'
+import { clearAccessToken, isCalendarLinked } from '../lib/calendar'
 import type { Settings } from '../types'
 import { Modal } from './Modal'
 
@@ -11,7 +11,7 @@ type Props = {
 
 export function SettingsModal({ settings, onSave, onClose }: Props) {
   const [draft, setDraft] = useState(settings)
-  const [calendarConnected, setCalendarConnected] = useState(() => Boolean(getStoredAccessToken()))
+  const [calendarConnected, setCalendarConnected] = useState(() => isCalendarLinked())
 
   function update<K extends keyof Settings>(key: K, value: Settings[K]) {
     setDraft((prev) => ({ ...prev, [key]: value }))

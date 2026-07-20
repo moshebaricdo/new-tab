@@ -4,6 +4,7 @@ import {
   connectGoogleCalendar,
   fetchUpcomingEvents,
   getStoredAccessToken,
+  isCalendarLinked,
 } from '../lib/calendar'
 import { useAutoRefresh } from '../lib/useAutoRefresh'
 import { formatEventTime, formatRelative } from '../lib/time'
@@ -24,7 +25,7 @@ export function Meetings({ settings, onOpenSettings }: Props) {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [connected, setConnected] = useState(() => Boolean(getStoredAccessToken()))
+  const [connected, setConnected] = useState(() => isCalendarLinked())
 
   const load = useCallback(
     async (opts: LoadOptions = {}) => {
@@ -36,8 +37,8 @@ export function Meetings({ settings, onOpenSettings }: Props) {
         return
       }
 
-      // Background sync needs an existing token — don't pop the OAuth prompt.
-      if (silent && !getStoredAccessToken()) {
+      // Background sync: only refresh if we've linked before (or still have a token).
+      if (silent && !forceConnect && !isCalendarLinked()) {
         setConnected(false)
         setEvents([])
         return
@@ -46,16 +47,24 @@ export function Meetings({ settings, onOpenSettings }: Props) {
       if (!silent) setLoading(true)
       setError(null)
       try {
-        let token = getStoredAccessToken()
-        if (!token || forceConnect) {
+        let token = forceConnect ? null : getStoredAccessToken()
+        if (!token) {
+          // Reuses prior consent; may briefly flash a Google popup when the ~1h token expires.
           token = await connectGoogleCalendar(settings.googleClientId)
         }
+
         const data = await fetchUpcomingEvents(token)
         setEvents(data)
         setConnected(true)
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load calendar')
-        setConnected(Boolean(getStoredAccessToken()))
+        if (silent) {
+          setConnected(false)
+          setEvents([])
+          setError(null)
+        } else {
+          setError(e instanceof Error ? e.message : 'Failed to load calendar')
+          setConnected(isCalendarLinked() && Boolean(getStoredAccessToken()))
+        }
       } finally {
         if (!silent) setLoading(false)
       }
@@ -64,8 +73,8 @@ export function Meetings({ settings, onOpenSettings }: Props) {
   )
 
   useEffect(() => {
-    if (settings.googleClientId && getStoredAccessToken()) {
-      void load()
+    if (settings.googleClientId && isCalendarLinked()) {
+      void load({ silent: true })
     }
   }, [settings.googleClientId, load])
 

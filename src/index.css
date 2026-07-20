@@ -975,6 +975,7 @@ a.meeting-row-title {
   flex-shrink: 0;
   border-radius: 3px;
   object-fit: contain;
+  background: transparent;
 }
 
 .folder-favicon-fallback {

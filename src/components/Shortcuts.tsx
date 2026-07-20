@@ -18,7 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import { useMemo, useRef, useState } from 'react'
-import { faviconForUrl } from '../lib/favicon'
+import { faviconSourcesForUrl } from '../lib/favicon'
 import { fileToIconDataUrl } from '../lib/icons'
 import { createId } from '../lib/storage'
 import type { AppShortcut, FolderLink, ShortcutFolder } from '../types'
@@ -674,6 +674,27 @@ function SortableFolder({
   )
 }
 
+function FolderFavicon({ url }: { url: string }) {
+  const sources = useMemo(() => faviconSourcesForUrl(url), [url])
+  const [index, setIndex] = useState(0)
+
+  if (sources.length === 0 || index >= sources.length) {
+    return <span className="folder-favicon folder-favicon-fallback" aria-hidden />
+  }
+
+  return (
+    <img
+      className="folder-favicon"
+      src={sources[index]}
+      alt=""
+      width={16}
+      height={16}
+      draggable={false}
+      onError={() => setIndex((i) => i + 1)}
+    />
+  )
+}
+
 function SortableLink({
   link,
   onSave,
@@ -694,8 +715,6 @@ function SortableLink({
     opacity: isDragging ? 0.35 : 1,
   }
 
-  const favicon = faviconForUrl(link.url)
-
   return (
     <div className="folder-link" ref={setNodeRef} style={style}>
       <button
@@ -709,11 +728,7 @@ function SortableLink({
       </button>
       <a className="folder-link-main" href={link.url}>
         <span className="folder-content-start">
-          {favicon ? (
-            <img className="folder-favicon" src={favicon} alt="" width={16} height={16} />
-          ) : (
-            <span className="folder-favicon folder-favicon-fallback" aria-hidden />
-          )}
+          <FolderFavicon url={link.url} />
           <span className="folder-link-title">{link.title}</span>
         </span>
       </a>
