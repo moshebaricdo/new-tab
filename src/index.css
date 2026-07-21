@@ -300,8 +300,7 @@ a.pressable:active,
 }
 
 .side-col {
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
   animation: fade-up 400ms var(--ease-out) 160ms both;
 }
 
@@ -806,6 +805,61 @@ a.meeting-row-title {
 
 /* ─── Folders ────────────────────────────────────────── */
 
+.shortcuts {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.shortcuts > .section-head,
+.shortcuts > .apps-row {
+  flex-shrink: 0;
+}
+
+.folders-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.folders-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 2px;
+}
+
+.folders-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 28px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms var(--ease-out);
+}
+
+.folders-fade.is-visible {
+  opacity: 1;
+}
+
+.folders-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--bg), transparent);
+}
+
+.folders-fade-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--bg), transparent);
+}
+
 .folders {
   display: flex;
   flex-direction: column;
@@ -1297,6 +1351,20 @@ a.meeting-row-title {
   }
 
   .panel.pr-panel {
+    flex: none;
+    max-height: min(60dvh, 520px);
+  }
+
+  .shortcuts {
+    flex: none;
+    overflow: visible;
+  }
+
+  .folders-shell {
+    flex: none;
+  }
+
+  .folders-scroll {
     flex: none;
     max-height: min(60dvh, 520px);
   }

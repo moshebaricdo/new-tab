@@ -17,7 +17,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { faviconSourcesForUrl } from '../lib/favicon'
 import { fileToIconDataUrl } from '../lib/icons'
 import { createId } from '../lib/storage'
@@ -47,6 +47,9 @@ export function Shortcuts({ apps, folders, onChangeApps, onChangeFolders }: Prop
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null)
   const [newFolderOpen, setNewFolderOpen] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
+  const [fadeTop, setFadeTop] = useState(false)
+  const [fadeBottom, setFadeBottom] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const folderSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -56,6 +59,29 @@ export function Shortcuts({ apps, folders, onChangeApps, onChangeFolders }: Prop
     () => folders.find((f) => f.id === activeFolderId) ?? null,
     [folders, activeFolderId],
   )
+
+  const updateFades = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) {
+      setFadeTop(false)
+      setFadeBottom(false)
+      return
+    }
+    const { scrollTop, scrollHeight, clientHeight } = el
+    const canScroll = scrollHeight > clientHeight + 1
+    setFadeTop(canScroll && scrollTop > 2)
+    setFadeBottom(canScroll && scrollTop + clientHeight < scrollHeight - 2)
+  }, [])
+
+  useEffect(() => {
+    updateFades()
+    const el = scrollRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => updateFades())
+    ro.observe(el)
+    if (el.firstElementChild) ro.observe(el.firstElementChild)
+    return () => ro.disconnect()
+  }, [folders, updateFades])
 
   function updateFolder(id: string, patch: Partial<ShortcutFolder>) {
     onChangeFolders(folders.map((f) => (f.id === id ? { ...f, ...patch } : f)))
@@ -182,60 +208,69 @@ export function Shortcuts({ apps, folders, onChangeApps, onChangeFolders }: Prop
         </div>
       </div>
 
-      <DndContext
-        sensors={folderSensors}
-        collisionDetection={closestCenter}
-        modifiers={[restrictToVerticalAxis]}
-        onDragStart={onFolderDragStart}
-        onDragEnd={onFolderDragEnd}
-        onDragCancel={() => setActiveFolderId(null)}
-      >
-        <SortableContext items={folders.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-          <div className="folders">
-            {folders.map((folder) => (
-              <SortableFolder
-                key={folder.id}
-                folder={folder}
-                dragging={activeFolderId === folder.id}
-                onToggle={() => updateFolder(folder.id, { collapsed: !folder.collapsed })}
-                onRename={(name) => updateFolder(folder.id, { name })}
-                onDelete={() => onChangeFolders(folders.filter((f) => f.id !== folder.id))}
-                onAddLink={(title, url) =>
-                  updateFolder(folder.id, {
-                    links: [...folder.links, { id: createId('link'), title, url }],
-                    collapsed: false,
-                  })
-                }
-                onUpdateLink={(linkId, title, url) =>
-                  updateFolder(folder.id, {
-                    links: folder.links.map((l) =>
-                      l.id === linkId ? { ...l, title, url } : l,
-                    ),
-                  })
-                }
-                onDeleteLink={(linkId) =>
-                  updateFolder(folder.id, {
-                    links: folder.links.filter((l) => l.id !== linkId),
-                  })
-                }
-                onReorderLinks={(links) => updateFolder(folder.id, { links })}
-              />
-            ))}
-          </div>
-        </SortableContext>
-        <DragOverlay dropAnimation={null}>
-          {activeFolder ? (
-            <div className="folder folder-overlay">
-              <div className="folder-head">
-                <span className="folder-grip">
-                  <GripIcon />
-                </span>
-                <span className="folder-name">{activeFolder.name}</span>
+      <div className="folders-shell">
+        <div className={`folders-fade folders-fade-top${fadeTop ? ' is-visible' : ''}`} aria-hidden />
+        <div className="folders-scroll" ref={scrollRef} onScroll={updateFades}>
+          <DndContext
+            sensors={folderSensors}
+            collisionDetection={closestCenter}
+            modifiers={[restrictToVerticalAxis]}
+            onDragStart={onFolderDragStart}
+            onDragEnd={onFolderDragEnd}
+            onDragCancel={() => setActiveFolderId(null)}
+          >
+            <SortableContext items={folders.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+              <div className="folders">
+                {folders.map((folder) => (
+                  <SortableFolder
+                    key={folder.id}
+                    folder={folder}
+                    dragging={activeFolderId === folder.id}
+                    onToggle={() => updateFolder(folder.id, { collapsed: !folder.collapsed })}
+                    onRename={(name) => updateFolder(folder.id, { name })}
+                    onDelete={() => onChangeFolders(folders.filter((f) => f.id !== folder.id))}
+                    onAddLink={(title, url) =>
+                      updateFolder(folder.id, {
+                        links: [...folder.links, { id: createId('link'), title, url }],
+                        collapsed: false,
+                      })
+                    }
+                    onUpdateLink={(linkId, title, url) =>
+                      updateFolder(folder.id, {
+                        links: folder.links.map((l) =>
+                          l.id === linkId ? { ...l, title, url } : l,
+                        ),
+                      })
+                    }
+                    onDeleteLink={(linkId) =>
+                      updateFolder(folder.id, {
+                        links: folder.links.filter((l) => l.id !== linkId),
+                      })
+                    }
+                    onReorderLinks={(links) => updateFolder(folder.id, { links })}
+                  />
+                ))}
               </div>
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+            </SortableContext>
+            <DragOverlay dropAnimation={null}>
+              {activeFolder ? (
+                <div className="folder folder-overlay">
+                  <div className="folder-head">
+                    <span className="folder-grip">
+                      <GripIcon />
+                    </span>
+                    <span className="folder-name">{activeFolder.name}</span>
+                  </div>
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </div>
+        <div
+          className={`folders-fade folders-fade-bottom${fadeBottom ? ' is-visible' : ''}`}
+          aria-hidden
+        />
+      </div>
     </section>
   )
 }
