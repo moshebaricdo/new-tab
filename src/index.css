@@ -672,7 +672,12 @@ a.meeting-row-title {
 
 .empty-state p,
 .error-state p {
-  margin: 0 0 12px;
+  margin: 0;
+}
+
+.empty-state p:not(:last-child),
+.error-state p:not(:last-child) {
+  margin-bottom: 12px;
 }
 
 /* ─── Apps row ───────────────────────────────────────── */
