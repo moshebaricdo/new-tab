@@ -33,19 +33,24 @@ export type Settings = {
   theme: ThemeMode
 }
 
-export type PullRequest = {
-  id: number
-  number: number
+export type GitHubNotificationReason =
+  | 'review_requested'
+  | 'mention'
+  | 'assign'
+  | 'team_mention'
+  | 'approval_requested'
+
+export type GitHubNotification = {
+  id: string
   title: string
   htmlUrl: string
   repoFullName: string
   updatedAt: string
-  createdAt: string
-  draft: boolean
-  state: 'open' | 'closed'
-  merged: boolean
-  labels: string[]
-  reason: 'review-requested' | 'mentioned' | 'assigned'
+  unread: boolean
+  reason: GitHubNotificationReason
+  subjectType: string
+  /** Issue/PR number when parseable from the API subject URL. */
+  number?: number
 }
 
 export type CalendarEvent = {

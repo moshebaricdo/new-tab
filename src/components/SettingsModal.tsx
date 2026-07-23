@@ -46,16 +46,6 @@ export function SettingsModal({ settings, onSave, onClose }: Props) {
           <h3 className="settings-section-title">GitHub</h3>
           <div className="form-stack">
             <div className="field">
-              <label htmlFor="githubUsername">Username</label>
-              <input
-                id="githubUsername"
-                value={draft.githubUsername}
-                onChange={(e) => update('githubUsername', e.target.value)}
-                placeholder="octocat"
-                autoComplete="username"
-              />
-            </div>
-            <div className="field">
               <label htmlFor="githubToken">Personal access token</label>
               <input
                 id="githubToken"
@@ -66,12 +56,23 @@ export function SettingsModal({ settings, onSave, onClose }: Props) {
                 autoComplete="off"
               />
               <p className="field-hint">
-                Create a classic token with <code>repo</code> (or public_repo) scope at{' '}
+                Create a classic token with the <code>notifications</code> scope (or{' '}
+                <code>repo</code>) at{' '}
                 <a href="https://github.com/settings/tokens" target="_blank" rel="noreferrer">
                   github.com/settings/tokens
                 </a>
-                . Needed to see private PR review requests.
+                . Used to load your unread GitHub inbox.
               </p>
+            </div>
+            <div className="field">
+              <label htmlFor="githubUsername">Username (optional)</label>
+              <input
+                id="githubUsername"
+                value={draft.githubUsername}
+                onChange={(e) => update('githubUsername', e.target.value)}
+                placeholder="octocat"
+                autoComplete="username"
+              />
             </div>
           </div>
         </div>

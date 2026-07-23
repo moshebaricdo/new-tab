@@ -4,6 +4,7 @@ import {
   FaCalendarDays,
   FaCheck,
   FaChevronDown,
+  FaCircleDot,
   FaCodePullRequest,
   FaEnvelope,
   FaFigma,
@@ -47,6 +48,7 @@ export const FolderPlusIcon = makeIcon(FaFolderPlus)
 export const GripIcon = makeIcon(FaGripVertical)
 export const ChevronIcon = makeIcon(FaChevronDown)
 export const GitPRIcon = makeIcon(FaCodePullRequest)
+export const GitIssueIcon = makeIcon(FaCircleDot)
 export const CalendarEventIcon = makeIcon(FaCalendarDays)
 export const CloseIcon = makeIcon(FaXmark)
 export const VideoIcon = makeIcon(FaVideo)

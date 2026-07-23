@@ -2,7 +2,7 @@
 
 A minimal personal new-tab dashboard with:
 
-- **GitHub PRs** you’re review-requested on, mentioned in, or assigned to
+- **GitHub Activity** from your unread notifications (review requests, mentions, assignments)
 - **Upcoming Google Calendar** events
 - **Shortcuts**: a fixed app row (Gmail, Calendar, Figma, GitHub) plus folders of links you can add, edit, reorder, and delete
 
@@ -41,10 +41,10 @@ Shown in the greeting.
 
 ### GitHub
 
-1. Create a [Personal Access Token](https://github.com/settings/tokens) (classic) with `repo` scope (or `public_repo` if you only need public PRs).
-2. Paste the token and your GitHub username.
+1. Create a [Personal Access Token](https://github.com/settings/tokens) (classic) with the `notifications` scope (or `repo`, which includes it).
+2. Paste the token in Settings.
 
-The dashboard searches open PRs where you are a **requested reviewer**, **mentioned**, or **assignee**.
+The dashboard loads your **unread** notifications for review requests (including team requests), @mentions, assignments, and team mentions — closer to GitHub’s own inbox than issue search.
 
 ### Google Calendar
 

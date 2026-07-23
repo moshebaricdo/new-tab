@@ -1,123 +1,137 @@
-import type { PullRequest } from '../types'
+import type { GitHubNotification, GitHubNotificationReason } from '../types'
 
-type GhIssueSearchItem = {
-  id: number
-  number: number
+const ACTIONABLE_REASONS = new Set<GitHubNotificationReason>([
+  'review_requested',
+  'mention',
+  'assign',
+  'team_mention',
+  'approval_requested',
+])
+
+type GhNotificationSubject = {
   title: string
-  html_url: string
+  url: string | null
+  latest_comment_url: string | null
+  type: string
+}
+
+type GhNotification = {
+  id: string
+  unread: boolean
+  reason: string
   updated_at: string
-  created_at: string
-  draft?: boolean
-  state: string
-  pull_request?: { merged_at: string | null }
-  labels: { name: string }[]
-  repository_url: string
+  subject: GhNotificationSubject
+  repository: {
+    full_name: string
+    html_url: string
+  }
 }
 
-type SearchResponse = {
-  items: GhIssueSearchItem[]
-  message?: string
+function isActionableReason(reason: string): reason is GitHubNotificationReason {
+  return ACTIONABLE_REASONS.has(reason as GitHubNotificationReason)
 }
 
-async function searchPRs(
-  token: string,
-  query: string,
-): Promise<GhIssueSearchItem[]> {
-  const url = new URL('https://api.github.com/search/issues')
-  url.searchParams.set('q', query)
-  url.searchParams.set('sort', 'updated')
-  url.searchParams.set('order', 'desc')
-  url.searchParams.set('per_page', '40')
+/** Convert an API subject URL to a browsable github.com URL + optional number. */
+function subjectLink(
+  apiUrl: string | null | undefined,
+  repoHtmlUrl: string,
+): { htmlUrl: string; number?: number } {
+  if (!apiUrl) {
+    return { htmlUrl: repoHtmlUrl }
+  }
+
+  try {
+    const url = new URL(apiUrl)
+    // https://api.github.com/repos/owner/repo/pulls/123
+    // https://api.github.com/repos/owner/repo/issues/123
+    const match = url.pathname.match(
+      /^\/repos\/([^/]+\/[^/]+)\/(pulls|issues|commits|releases)\/([^/]+)/,
+    )
+    if (!match) {
+      return { htmlUrl: repoHtmlUrl }
+    }
+
+    const [, repo, kind, id] = match
+    if (kind === 'pulls') {
+      const number = Number(id)
+      return {
+        htmlUrl: `https://github.com/${repo}/pull/${id}`,
+        number: Number.isFinite(number) ? number : undefined,
+      }
+    }
+    if (kind === 'issues') {
+      const number = Number(id)
+      return {
+        htmlUrl: `https://github.com/${repo}/issues/${id}`,
+        number: Number.isFinite(number) ? number : undefined,
+      }
+    }
+    if (kind === 'commits') {
+      return { htmlUrl: `https://github.com/${repo}/commit/${id}` }
+    }
+    if (kind === 'releases') {
+      return { htmlUrl: `https://github.com/${repo}/releases/tag/${id}` }
+    }
+  } catch {
+    // fall through
+  }
+
+  return { htmlUrl: repoHtmlUrl }
+}
+
+function toNotification(item: GhNotification): GitHubNotification | null {
+  if (!isActionableReason(item.reason)) return null
+
+  const apiUrl = item.subject.url || item.subject.latest_comment_url
+  const { htmlUrl, number } = subjectLink(apiUrl, item.repository.html_url)
+
+  return {
+    id: item.id,
+    title: item.subject.title || '(No title)',
+    htmlUrl,
+    repoFullName: item.repository.full_name,
+    updatedAt: item.updated_at,
+    unread: item.unread,
+    reason: item.reason,
+    subjectType: item.subject.type || 'Unknown',
+    number,
+  }
+}
+
+/** Unread, actionable GitHub notifications (reviews, mentions, assignments). */
+export async function fetchGithubNotifications(token: string): Promise<GitHubNotification[]> {
+  if (!token.trim()) {
+    throw new Error('Add a GitHub personal access token in Settings.')
+  }
+
+  const url = new URL('https://api.github.com/notifications')
+  url.searchParams.set('all', 'false')
+  url.searchParams.set('participating', 'false')
+  url.searchParams.set('per_page', '50')
 
   const res = await fetch(url, {
     headers: {
       Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${token.trim()}`,
       'X-GitHub-Api-Version': '2022-11-28',
     },
   })
 
-  const data = (await res.json()) as SearchResponse
   if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { message?: string }
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(
+        data.message ||
+          'GitHub rejected the token. Use a classic PAT with the notifications (or repo) scope.',
+      )
+    }
     throw new Error(data.message || `GitHub API error (${res.status})`)
   }
-  return data.items ?? []
-}
 
-function repoFromUrl(repositoryUrl: string): string {
-  // https://api.github.com/repos/owner/repo
-  const parts = repositoryUrl.split('/')
-  return `${parts.at(-2)}/${parts.at(-1)}`
-}
+  const items = (await res.json()) as GhNotification[]
 
-function toPR(item: GhIssueSearchItem, reason: PullRequest['reason']): PullRequest {
-  return {
-    id: item.id,
-    number: item.number,
-    title: item.title,
-    htmlUrl: item.html_url,
-    repoFullName: repoFromUrl(item.repository_url),
-    updatedAt: item.updated_at,
-    createdAt: item.created_at,
-    draft: Boolean(item.draft),
-    state: item.state === 'closed' ? 'closed' : 'open',
-    merged: Boolean(item.pull_request?.merged_at),
-    labels: (item.labels ?? []).map((l) => l.name),
-    reason,
-  }
-}
-
-/** PRs you're review-requested on, mentioned in, or assigned — open + recent activity. */
-export async function fetchTaggedPullRequests(
-  token: string,
-  username: string,
-): Promise<PullRequest[]> {
-  const user = username.replace(/^@/, '').trim()
-  if (!token) throw new Error('Add a GitHub personal access token in Settings.')
-  if (!user) throw new Error('Add your GitHub username in Settings.')
-
-  const queries: { q: string; reason: PullRequest['reason'] }[] = [
-    {
-      q: `is:pr is:open review-requested:${user} archived:false`,
-      reason: 'review-requested',
-    },
-    {
-      q: `is:pr is:open mentions:${user} archived:false`,
-      reason: 'mentioned',
-    },
-    {
-      q: `is:pr is:open assignee:${user} archived:false`,
-      reason: 'assigned',
-    },
-  ]
-
-  const results = await Promise.all(queries.map((q) => searchPRs(token, q.q)))
-  const byId = new Map<number, PullRequest>()
-
-  results.forEach((items, i) => {
-    const reason = queries[i].reason
-    for (const item of items) {
-      if (!item.pull_request) continue
-      const existing = byId.get(item.id)
-      if (!existing) {
-        byId.set(item.id, toPR(item, reason))
-      } else if (reason === 'review-requested') {
-        // Prefer review-requested as the primary reason
-        existing.reason = reason
-      }
-    }
-  })
-
-  return [...byId.values()].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  )
-}
-
-export function summarizePRs(prs: PullRequest[]) {
-  return {
-    open: prs.filter((p) => p.state === 'open' && !p.draft).length,
-    drafts: prs.filter((p) => p.draft).length,
-    reviewRequested: prs.filter((p) => p.reason === 'review-requested').length,
-    mentioned: prs.filter((p) => p.reason === 'mentioned').length,
-  }
+  return items
+    .map(toNotification)
+    .filter((n): n is GitHubNotification => Boolean(n))
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
 }
