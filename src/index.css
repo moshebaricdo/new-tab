@@ -391,6 +391,8 @@ a.pressable:active,
 /* ─── Meetings (today) ───────────────────────────────── */
 
 .meetings-card {
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -399,6 +401,7 @@ a.pressable:active,
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  flex-shrink: 0;
   padding: 18px 18px 16px;
 }
 
@@ -474,10 +477,17 @@ a.meeting-next-title {
 
 .meetings-rest {
   border-top: 1px solid var(--border);
+  /* Show ~2 secondary rows; remaining events scroll inside the card. */
+  max-height: calc(2 * 56px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .meeting-row {
   align-items: center;
+  min-height: 56px;
+  box-sizing: border-box;
   padding: 11px 16px;
 }
 

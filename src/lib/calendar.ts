@@ -171,7 +171,7 @@ function parseEvent(e: GcalEvent): CalendarEvent | null {
   }
 }
 
-/** Today's remaining meetings (excludes working location / OOO / focus / birthdays). */
+/** Today's remaining timed meetings (skips all-day + working location / OOO / focus / birthdays). */
 export async function fetchUpcomingEvents(accessToken: string): Promise<CalendarEvent[]> {
   const now = new Date()
   const timeMin = startOfDay(now).toISOString()
@@ -205,5 +205,6 @@ export async function fetchUpcomingEvents(accessToken: string): Promise<Calendar
   return (data.items ?? [])
     .map(parseEvent)
     .filter((e): e is CalendarEvent => Boolean(e))
+    .filter((e) => !e.allDay)
     .filter((e) => e.end.getTime() >= now.getTime())
 }
