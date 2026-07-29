@@ -80,7 +80,7 @@ export function PullRequests({ settings, onOpenSettings }: Props) {
 
   const listContent = !configured ? (
     <div className="empty-state">
-      <p>Add a GitHub token in Settings to see your unread notifications.</p>
+      <p>Add a GitHub token in Settings to see your review queue.</p>
       <button type="button" className="ghost-btn" onClick={onOpenSettings}>
         Open settings
       </button>
@@ -98,7 +98,7 @@ export function PullRequests({ settings, onOpenSettings }: Props) {
     </div>
   ) : items.length === 0 ? (
     <div className="empty-state">
-      <p>No unread review requests, mentions, or assignments. Nice inbox.</p>
+      <p>No open review requests, mentions, or assignments. Nice queue.</p>
     </div>
   ) : (
     items.map((item) => {

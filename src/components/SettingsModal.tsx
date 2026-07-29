@@ -56,12 +56,12 @@ export function SettingsModal({ settings, onSave, onClose }: Props) {
                 autoComplete="off"
               />
               <p className="field-hint">
-                Create a classic token with the <code>notifications</code> scope (or{' '}
-                <code>repo</code>) at{' '}
+                Create a classic token with the <code>repo</code> and{' '}
+                <code>notifications</code> scopes at{' '}
                 <a href="https://github.com/settings/tokens" target="_blank" rel="noreferrer">
                   github.com/settings/tokens
                 </a>
-                . Used to load your unread GitHub inbox.
+                . Used for your open review queue and recent GitHub activity.
               </p>
             </div>
             <div className="field">

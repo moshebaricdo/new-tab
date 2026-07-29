@@ -2,7 +2,7 @@
 
 A minimal personal new-tab dashboard with:
 
-- **GitHub Activity** from your unread notifications (review requests, mentions, assignments)
+- **GitHub Activity** from your open review queue plus recent actionable notifications (review requests, mentions, assignments)
 - **Upcoming Google Calendar** events
 - **Shortcuts**: a fixed app row (Gmail, Calendar, Figma, GitHub) plus folders of links you can add, edit, reorder, and delete
 
@@ -41,10 +41,10 @@ Shown in the greeting.
 
 ### GitHub
 
-1. Create a [Personal Access Token](https://github.com/settings/tokens) (classic) with the `notifications` scope (or `repo`, which includes it).
+1. Create a [Personal Access Token](https://github.com/settings/tokens) (classic) with the `repo` and `notifications` scopes.
 2. Paste the token in Settings.
 
-The dashboard loads your **unread** notifications for review requests (including team requests), @mentions, assignments, and team mentions — closer to GitHub’s own inbox than issue search.
+The dashboard shows your **open review queue** (PRs where you’re still review-requested, mentioned, or assigned) plus recent actionable notifications — including team review requests that issue search often misses.
 
 ### Google Calendar
 
